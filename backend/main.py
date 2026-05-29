@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes.chat import router as chat_router
 from api.routes.voice import router as voice_router
 from api.routes.memory import router as memory_router
+from api.routes.documents import router as documents_router
 from core.config import settings
 from core.database import engine
 from core import models
@@ -22,6 +23,7 @@ app.add_middleware(
 app.include_router(chat_router, prefix="/api")
 app.include_router(voice_router, prefix="/api/voice")
 app.include_router(memory_router, prefix="/api/memory")
+app.include_router(documents_router, prefix="/api/documents")
 
 @app.get("/")
 async def root():
