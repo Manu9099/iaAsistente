@@ -1,6 +1,8 @@
 import os
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
+import json
+from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from google_auth_oauthlib.flow import Flow
@@ -15,8 +17,12 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
 ]
 
+TOKEN_FILE = Path("tokens.json")
 user_tokens = {}
 flow_store = {}
+
+if TOKEN_FILE.exists():
+    user_tokens = json.loads(TOKEN_FILE.read_text())
 
 def get_flow():
     return Flow.from_client_config(
@@ -62,6 +68,7 @@ async def callback(code: str, state: str):
         "scopes": list(credentials.scopes),
     }
 
+    TOKEN_FILE.write_text(json.dumps(user_tokens))
     flow_store.pop(state, None)
     return RedirectResponse("http://localhost:3000?auth=success")
 
