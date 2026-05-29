@@ -6,6 +6,7 @@ from api.routes.memory import router as memory_router
 from api.routes.documents import router as documents_router
 from api.routes.auth import router as auth_router
 from api.routes.automation import router as automation_router
+from api.routes.agents import router as agents_router
 from core.config import settings
 from core.database import engine
 from core import models
@@ -28,6 +29,7 @@ app.include_router(memory_router, prefix="/api/memory")
 app.include_router(documents_router, prefix="/api/documents")
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(automation_router, prefix="/api/automation")
+app.include_router(agents_router, prefix="/api/agents")
 
 @app.get("/")
 async def root():
