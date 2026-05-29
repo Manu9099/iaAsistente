@@ -8,6 +8,7 @@ from api.routes.auth import router as auth_router
 from api.routes.automation import router as automation_router
 from api.routes.agents import router as agents_router
 from api.routes.vision import router as vision_router
+from api.routes.browser import router as browser_router
 from core.config import settings
 from core.database import engine
 from core import models
@@ -32,6 +33,7 @@ app.include_router(auth_router, prefix="/api/auth")
 app.include_router(automation_router, prefix="/api/automation")
 app.include_router(agents_router, prefix="/api/agents")
 app.include_router(vision_router, prefix="/api/vision")
+app.include_router(browser_router, prefix="/api/browser")
 
 @app.get("/")
 async def root():
