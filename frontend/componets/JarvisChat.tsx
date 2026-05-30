@@ -14,12 +14,13 @@ const CHIPS = [
 ];
 
 const AGENTS = [
-  { id: "auto", label: "AUTO" },
   { id: "chat", label: "CHAT" },
+  { id: "auto", label: "AUTO" },
   { id: "research", label: "RESEARCH" },
   { id: "coding", label: "CODING" },
   { id: "content", label: "CONTENT" },
   { id: "productivity", label: "PRODUCTIVITY" },
+  { id: "career", label: "CAREER" },
 ];
 
 export default function JarvisChat() {

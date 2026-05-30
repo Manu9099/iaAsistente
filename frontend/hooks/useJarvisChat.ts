@@ -10,7 +10,7 @@ interface Message {
 export function useJarvisChat(onAssistantReply?: (text: string) => void) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeAgent, setActiveAgent] = useState("auto");
+  const [activeAgent, setActiveAgent] = useState("chat");
   const { saveMessage, clearHistory } = useMemory();
 
   async function sendMessage(text: string) {
@@ -27,14 +27,18 @@ export function useJarvisChat(onAssistantReply?: (text: string) => void) {
     setMessages([...updatedMessages, assistantMessage]);
 
     try {
-      const isAgentTask = activeAgent !== "chat";
-      const endpoint = isAgentTask
-        ? "http://localhost:8000/api/agents/run"
-        : "http://localhost:8000/api/chat";
+ const isAgentTask = activeAgent !== "chat";
+const endpoint = activeAgent === "career"
+  ? "http://localhost:8000/api/career/chat"
+  : isAgentTask
+  ? "http://localhost:8000/api/agents/run"
+  : "http://localhost:8000/api/chat";
 
-      const body = isAgentTask
-        ? { message: text, history: messages.map(m => ({ role: m.role, content: m.content })), agent: activeAgent }
-        : { message: text, history: messages.map(m => ({ role: m.role, content: m.content })) };
+const body = activeAgent === "career"
+  ? { message: text, history: messages.map(m => ({ role: m.role, content: m.content })) }
+  : isAgentTask
+  ? { message: text, history: messages.map(m => ({ role: m.role, content: m.content })), agent: activeAgent }
+  : { message: text, history: messages.map(m => ({ role: m.role, content: m.content })) };
 
       const response = await fetch(endpoint, {
         method: "POST",
