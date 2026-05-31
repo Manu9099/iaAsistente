@@ -108,6 +108,53 @@ TOOLS = [
                 "required": ["message_id"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_word",
+            "description": "Crea un documento Word y lo guarda en el computador",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Nombre del archivo sin extensión"},
+                    "content": {"type": "string", "description": "Contenido del documento"},
+                    "folder": {"type": "string", "description": "Subcarpeta donde guardar (opcional)"}
+                },
+                "required": ["filename", "content"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_excel",
+            "description": "Crea un archivo Excel con datos y lo guarda en el computador",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Nombre del archivo sin extensión"},
+                    "headers": {"type": "array", "items": {"type": "string"}, "description": "Encabezados de columnas"},
+                    "data": {"type": "array", "items": {"type": "array"}, "description": "Filas de datos"},
+                    "folder": {"type": "string", "description": "Subcarpeta donde guardar (opcional)"}
+                },
+                "required": ["filename", "data"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "open_app",
+            "description": "Abre una aplicación en el computador como Word, Excel, Spotify, Chrome",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "app": {"type": "string", "description": "Nombre de la aplicación: word, excel, spotify, chrome, notepad, calculator"}
+                },
+                "required": ["app"]
+            }
+        }
     }
 
 ]
@@ -141,7 +188,21 @@ async def execute_tool(name: str, args: dict) -> str:
         from api.routes.automation import read_email
         result = await read_email(message_id=args["message_id"])
         return f"Correo de {result['from']}\nAsunto: {result['subject']}\nFecha: {result['date']}\n\nContenido:\n{result['body']}"
+    elif name == "create_word":
+        from api.routes.computer import create_word, WordRequest
+        result = await create_word(WordRequest(**args))
+        return f"Documento Word creado en: {result['path']}"
+    elif name == "create_excel":
+        from api.routes.computer import create_excel, ExcelRequest
+        result = await create_excel(ExcelRequest(**args))
+        return f"Archivo Excel creado en: {result['path']}"
+    elif name == "open_app":
+        from api.routes.computer import open_file, AppRequest
+        result = await open_file(AppRequest(app=args["app"]))
+        return f"Aplicación {result['app']} abierta"
+
     return "Herramienta no encontrada"
+
 
 def stream_response(message: str, history: list):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
