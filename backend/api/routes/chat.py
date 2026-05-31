@@ -49,7 +49,67 @@ TOOLS = [
                 "required": ["title", "date", "time"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "reply_email",
+            "description": "Responde un correo electrónico existente en Gmail",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "thread_id": {"type": "string", "description": "ID del hilo del correo"},
+                    "message_id": {"type": "string", "description": "ID del mensaje original"},
+                    "to": {"type": "string", "description": "Email del destinatario"},
+                    "subject": {"type": "string", "description": "Asunto del correo original"},
+                    "body": {"type": "string", "description": "Cuerpo de la respuesta"}
+                },
+                "required": ["thread_id", "message_id", "to", "subject", "body"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_inbox",
+            "description": "Obtiene los últimos correos del inbox de Gmail",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+
+    {
+        "type": "function",
+        "function": {
+            "name": "search_emails",
+            "description": "Busca correos específicos en Gmail por remitente, asunto o palabra clave",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Término de búsqueda, ej: 'from:juan@gmail.com' o 'subject:reunión'"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_email",
+            "description": "Lee el contenido completo de un correo específico",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message_id": {"type": "string", "description": "ID del mensaje a leer"}
+                },
+                "required": ["message_id"]
+            }
+        }
     }
+
 ]
 
 class ChatRequest(BaseModel):
@@ -63,6 +123,24 @@ async def execute_tool(name: str, args: dict) -> str:
     elif name == "create_event":
         result = await create_event(EventRequest(**args))
         return f"Evento creado: {result['link']}"
+    elif name == "reply_email":
+        from api.routes.automation import reply_email, ReplyRequest
+        result = await reply_email(ReplyRequest(**args))
+        return f"Respuesta enviada a {result['to']}"
+    elif name == "get_inbox":
+        from api.routes.automation import get_inbox
+        result = await get_inbox()
+        emails = "\n".join([f"- De: {e['from']} | Asunto: {e['subject']} | ID: {e['id']}" for e in result])
+        return f"Últimos correos:\n{emails}"
+    elif name == "search_emails":
+        from api.routes.automation import search_emails
+        result = await search_emails(query=args["query"])
+        emails = "\n".join([f"- De: {e['from']} | Asunto: {e['subject']} | ID: {e['id']} | Thread: {e['thread_id']}" for e in result])
+        return f"Correos encontrados:\n{emails}"
+    elif name == "read_email":
+        from api.routes.automation import read_email
+        result = await read_email(message_id=args["message_id"])
+        return f"Correo de {result['from']}\nAsunto: {result['subject']}\nFecha: {result['date']}\n\nContenido:\n{result['body']}"
     return "Herramienta no encontrada"
 
 def stream_response(message: str, history: list):

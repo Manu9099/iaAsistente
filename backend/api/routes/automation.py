@@ -87,6 +87,8 @@ async def create_event(req: EventRequest):
 
     result = service.events().insert(calendarId="primary", body=event).execute()
     return {"status": "creado", "link": result.get("htmlLink")}
+ 
+
 
 @router.get("/calendar/events")
 async def get_events():
@@ -113,4 +115,106 @@ async def get_events():
             "link": e.get("htmlLink", "")
         })
 
+
     return events
+   
+class ReplyRequest(BaseModel):
+    thread_id: str
+    message_id: str
+    to: str
+    subject: str
+    body: str
+
+@router.post("/gmail/reply")
+async def reply_email(req: ReplyRequest):
+    creds = get_credentials()
+    if not creds:
+        raise HTTPException(status_code=401, detail="No autenticado con Google")
+
+    service = build("gmail", "v1", credentials=creds)
+
+    message = MIMEText(req.body)
+    message["to"] = req.to
+    message["subject"] = f"Re: {req.subject}"
+    message["In-Reply-To"] = req.message_id
+    message["References"] = req.message_id
+
+    encoded = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+    service.users().messages().send(
+        userId="me",
+        body={
+            "raw": encoded,
+            "threadId": req.thread_id
+        }
+    ).execute()
+
+    return {"status": "respondido", "to": req.to}
+
+
+@router.get("/gmail/search")
+async def search_emails(query: str):
+    creds = get_credentials()
+    if not creds:
+        raise HTTPException(status_code=401, detail="No autenticado con Google")
+
+    service = build("gmail", "v1", credentials=creds)
+    results = service.users().messages().list(
+        userId="me", maxResults=5, q=query
+    ).execute()
+
+    messages = []
+    for msg in results.get("messages", []):
+        detail = service.users().messages().get(
+            userId="me", id=msg["id"], format="metadata",
+            metadataHeaders=["From", "Subject", "Date"]
+        ).execute()
+        headers = {h["name"]: h["value"] for h in detail["payload"]["headers"]}
+        messages.append({
+            "id": msg["id"],
+            "thread_id": detail["threadId"],
+            "from": headers.get("From", ""),
+            "subject": headers.get("Subject", ""),
+            "date": headers.get("Date", "")
+        })
+
+    return messages
+
+@router.get("/gmail/read/{message_id}")
+async def read_email(message_id: str):
+    creds = get_credentials()
+    if not creds:
+        raise HTTPException(status_code=401, detail="No autenticado con Google")
+
+    service = build("gmail", "v1", credentials=creds)
+    detail = service.users().messages().get(
+        userId="me", id=message_id, format="full"
+    ).execute()
+
+    headers = {h["name"]: h["value"] for h in detail["payload"]["headers"]}
+    
+    body = ""
+    payload = detail.get("payload", {})
+    if "parts" in payload:
+        for part in payload["parts"]:
+            if part["mimeType"] == "text/plain":
+                import base64
+                data = part["body"].get("data", "")
+                if data:
+                    body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+                    break
+    elif "body" in payload:
+        import base64
+        data = payload["body"].get("data", "")
+        if data:
+            body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+
+    return {
+        "id": message_id,
+        "thread_id": detail["threadId"],
+        "from": headers.get("From", ""),
+        "to": headers.get("To", ""),
+        "subject": headers.get("Subject", ""),
+        "date": headers.get("Date", ""),
+        "body": body[:2000]
+    }

@@ -266,15 +266,13 @@
     border-color: #ff444488;
   }
 
-  .doc-panel {
-    width: 100%;
-    max-width: 800px;
-    margin-top: 12px;
-    background: #03080f;
-    border: 0.5px solid #0d3a5a;
-    display: flex;
-    flex-direction: column;
-  }
+.doc-panel {
+  width: 100%;
+  background: #03080f;
+  border: 0.5px solid #0d3a5a;
+  display: flex;
+  flex-direction: column;
+}
 
   .doc-header {
     display: flex;

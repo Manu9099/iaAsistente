@@ -9,10 +9,32 @@ export default function Home() {
   const { sessionId } = useMemory();
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4">
-      <JarvisChat />
-      <DocumentChat sessionId={sessionId} />
-      <VisionPanel sessionId={sessionId} />
+    <main style={{
+      minHeight: "100vh",
+      background: "#03080f",
+      display: "flex",
+      alignItems: "stretch",
+      gap: "12px",
+      padding: "16px",
+    }}>
+      {/* Chat principal */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <JarvisChat />
+      </div>
+
+      {/* Barra lateral derecha */}
+      <div style={{
+        width: "360px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        overflowY: "auto",
+        maxHeight: "100vh",
+        paddingBottom: "16px",
+      }}>
+        <DocumentChat sessionId={sessionId} />
+        <VisionPanel sessionId={sessionId} />
+      </div>
     </main>
   );
 }
