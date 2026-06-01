@@ -96,3 +96,21 @@ async def list_files():
                 "size": f.stat().st_size
             })
     return files
+
+class OpenFileRequest(BaseModel):
+    filename: str
+    folder: str = ""
+
+@router.post("/files/open")
+async def open_document(req: OpenFileRequest):
+    folder = SAVE_DIR / req.folder if req.folder else SAVE_DIR
+    
+    matches = list(folder.rglob(f"{req.filename}*"))
+    
+    if not matches:
+        return {"status": "error", "detail": f"No se encontró {req.filename}"}
+    
+    filepath = matches[0]
+    os.startfile(str(filepath))
+    
+    return {"status": "abierto", "path": str(filepath)}

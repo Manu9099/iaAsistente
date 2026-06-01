@@ -11,6 +11,7 @@ from api.routes.vision import router as vision_router
 from api.routes.browser import router as browser_router
 from api.routes.career import router as career_router
 from api.routes.computer import router as computer_router
+from api.routes.spotify import router as spotify_router
 from core.config import settings
 from core.database import engine
 from core import models
@@ -38,6 +39,7 @@ app.include_router(vision_router, prefix="/api/vision")
 app.include_router(browser_router, prefix="/api/browser")
 app.include_router(career_router, prefix="/api/career")
 app.include_router(computer_router, prefix="/api/computer")
+app.include_router(spotify_router, prefix="/api/spotify")
 
 @app.get("/")
 async def root():

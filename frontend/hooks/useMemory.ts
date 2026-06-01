@@ -1,35 +1,38 @@
-import { useRef } from "react";
-
-const SESSION_ID = crypto.randomUUID();
+import { useRef, useEffect, useState } from "react";
 
 export function useMemory() {
-  const sessionId = useRef(SESSION_ID);
+  const [sessionId, setSessionId] = useState("");
+
+  useEffect(() => {
+    const existing = localStorage.getItem("jarvis_session_id");
+    if (existing) {
+      setSessionId(existing);
+    } else {
+      const newId = crypto.randomUUID();
+      localStorage.setItem("jarvis_session_id", newId);
+      setSessionId(newId);
+    }
+  }, []);
 
   async function saveMessage(role: string, content: string) {
+    if (!sessionId) return;
     await fetch("http://localhost:8000/api/memory/conversation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session_id: sessionId.current,
-        role,
-        content,
-      }),
+      body: JSON.stringify({ session_id: sessionId, role, content }),
     });
   }
 
   async function loadHistory() {
-    const res = await fetch(
-      `http://localhost:8000/api/memory/conversation/${sessionId.current}`
-    );
+    if (!sessionId) return [];
+    const res = await fetch(`http://localhost:8000/api/memory/conversation/${sessionId}`);
     return await res.json();
   }
 
   async function clearHistory() {
-    await fetch(
-      `http://localhost:8000/api/memory/conversation/${sessionId.current}`,
-      { method: "DELETE" }
-    );
+    if (!sessionId) return;
+    await fetch(`http://localhost:8000/api/memory/conversation/${sessionId}`, { method: "DELETE" });
   }
 
-  return { sessionId: sessionId.current, saveMessage, loadHistory, clearHistory };
+  return { sessionId, saveMessage, loadHistory, clearHistory };
 }

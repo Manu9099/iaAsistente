@@ -1,10 +1,16 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { useJarvisChat } from "@/hooks/useJarvisChat";
 import { useVoice } from "@/hooks/useVoice";
 import JarvisAvatar from "./JarvisAvatar";
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  agent?: string;
+};
 
 const CHIPS = [
   "¿Qué puedes hacer?",
@@ -25,13 +31,34 @@ const AGENTS = [
 
 export default function JarvisChat() {
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const { messages, isLoading, sendMessage, handleClear, activeAgent, setActiveAgent } =
-    useJarvisChat((reply) => speak(reply));
+  const {
+    messages,
+    isLoading,
+    sendMessage,
+    handleClear,
+    activeAgent,
+    setActiveAgent,
+  } = useJarvisChat() as {
+    messages: ChatMessage[];
+    isLoading: boolean;
+    sendMessage: (text: string) => void | Promise<void>;
+    handleClear: () => void | Promise<void>;
+    activeAgent: string;
+    setActiveAgent: (agent: string) => void;
+  };
 
-  const { isRecording, isSpeaking, startRecording, stopRecording, speak } =
-    useVoice((transcript) => sendMessage(transcript));
+  const { isRecording, isSpeaking, startRecording, stopRecording } = useVoice(
+    (transcript: string) => {
+      void sendMessage(transcript);
+    }
+  ) as {
+    isRecording: boolean;
+    isSpeaking: boolean;
+    startRecording: () => void | Promise<void>;
+    stopRecording: () => void;
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,139 +66,186 @@ export default function JarvisChat() {
 
   function handleSend() {
     if (!input.trim()) return;
-    sendMessage(input);
+    void sendMessage(input);
     setInput("");
   }
 
   function handleMic() {
-    if (isRecording) stopRecording();
-    else startRecording();
+    if (isRecording) {
+      stopRecording();
+      return;
+    }
+
+    void startRecording();
   }
 
   return (
-    <div className="jarvis-root">
-      <div className="scan-line" />
-      <div className="corner corner-tl" />
-      <div className="corner corner-tr" />
-      <div className="corner corner-bl" />
-      <div className="corner corner-br" />
-
-      <div className="header">
-        <div className="header-left">
-          <div className="pulse-ring">
-            <div className="pulse-dot" />
+    <section className="flex h-full min-h-[calc(100vh-190px)] w-full flex-1 flex-col overflow-hidden rounded-4xl border border-cyan-400/25 bg-[#010812] text-white">
+      <div className="flex items-center justify-between border-b border-cyan-400/20 bg-[#020b16] px-6 py-5">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-400/10 shadow-[0_0_30px_rgba(34,211,238,0.2)]">
+            <div className="h-4 w-4 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.9)]" />
           </div>
-          <span className="header-title">JARVIS</span>
+
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.5em] text-cyan-300">
+              JARVIS
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-white">
+              Asistente IA activo
+            </h2>
+          </div>
         </div>
-        <div className="status-bar">
-          <span className="status-item active">
-            {isRecording ? "ESCUCHANDO" : isSpeaking ? "HABLANDO" : isLoading ? "PROCESANDO" : "ONLINE"}
-          </span>
-          <div className="divider" />
-          <span className="status-item">AI CORE v1.0</span>
-          <div className="divider" />
-          <span className="status-item">{messages.length} MSGS</span>
-          <div className="divider" />
-          <button className="clear-btn" onClick={handleClear}>LIMPIAR</button>
-        </div>
+
+        <button
+          type="button"
+          onClick={() => void handleClear()}
+          className="rounded-xl border border-red-400/40 bg-red-500/10 px-5 py-3 text-sm font-black uppercase tracking-[0.25em] text-red-200 transition hover:bg-red-500/20"
+        >
+          Limpiar
+        </button>
       </div>
 
-      <JarvisAvatar
-        isSpeaking={isSpeaking}
-        isListening={isRecording}
-        isThinking={isLoading}
-      />
-
-      <div className="agent-selector">
+      <div className="flex flex-wrap gap-3 border-b border-cyan-400/20 bg-[#020b16]/80 px-6 py-4">
         {AGENTS.map((agent) => (
           <button
             key={agent.id}
-            className={`agent-btn ${activeAgent === agent.id ? "active" : ""}`}
+            type="button"
             onClick={() => setActiveAgent(agent.id)}
+            className={`rounded-xl border px-5 py-3 text-sm font-black uppercase tracking-[0.25em] transition ${
+              activeAgent === agent.id
+                ? "border-cyan-300 bg-cyan-400/20 text-cyan-100 shadow-[0_0_25px_rgba(34,211,238,0.16)]"
+                : "border-cyan-400/20 bg-[#07111f] text-cyan-300/80 hover:border-cyan-300/50 hover:bg-cyan-400/10"
+            }`}
           >
             {agent.label}
           </button>
         ))}
       </div>
 
-      <div className="messages">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="msg jarvis-msg"
-        >
-          <div className="msg-avatar jarvis">JAR</div>
-          <div>
-            <div className="msg-label">JARVIS — SISTEMA</div>
-            <div className="msg-bubble">
-              Sistemas en línea. Selecciona un agente o usa AUTO para detección automática.
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        {messages.length === 0 ? (
+          <div className="flex min-h-full flex-col items-center justify-center gap-8 text-center">
+            <JarvisAvatar
+              isSpeaking={isSpeaking}
+              isListening={isRecording}
+              isThinking={isLoading}
+            />
+
+            <div className="max-w-3xl">
+              <p className="text-base font-black uppercase tracking-[0.45em] text-cyan-300">
+                Esperando comando
+              </p>
+
+              <h3 className="mt-4 text-4xl font-black tracking-tight text-white lg:text-5xl">
+                Sistema en línea
+              </h3>
+
+              <p className="mt-4 text-xl leading-relaxed text-slate-300">
+                Selecciona un agente o escribe una instrucción para iniciar la
+                demo del asistente.
+              </p>
+            </div>
+
+            <div className="flex max-w-5xl flex-wrap justify-center gap-3">
+              {CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => void sendMessage(chip)}
+                  className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-5 py-3 text-base font-bold text-cyan-100 transition hover:border-cyan-300/60 hover:bg-cyan-400/20"
+                >
+                  {chip}
+                </button>
+              ))}
             </div>
           </div>
-        </motion.div>
+        ) : (
+          <div className="space-y-5">
+            {messages.map((msg, index) => (
+              <motion.div
+                key={`${msg.role}-${index}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`flex gap-4 ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                {msg.role === "assistant" && (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-400/10 text-sm font-black text-cyan-200">
+                    JAR
+                  </div>
+                )}
 
-        <AnimatePresence>
-          {messages.map((msg, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`msg ${msg.role === "user" ? "user" : "jarvis-msg"}`}
-            >
-              <div className={`msg-avatar ${msg.role === "user" ? "user-av" : "jarvis"}`}>
-                {msg.role === "user" ? "USR" : "JAR"}
-              </div>
-              <div>
-                <div className="msg-label">
-                  {msg.role === "user" ? "USUARIO" : `JARVIS — ${(msg.agent || "IA").toUpperCase()}`}
+                <div
+                  className={`max-w-[78%] rounded-2xl border px-5 py-4 text-lg leading-relaxed ${
+                    msg.role === "user"
+                      ? "border-violet-300/30 bg-violet-500/15 text-violet-50"
+                      : "border-cyan-300/30 bg-[#071827] text-cyan-50"
+                  }`}
+                >
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.35em] text-cyan-300/80">
+                    {msg.role === "user"
+                      ? "Usuario"
+                      : `Jarvis — ${(msg.agent || "IA").toUpperCase()}`}
+                  </p>
+
+                  <p className="whitespace-pre-wrap">
+                    {msg.content || "Procesando respuesta..."}
+                  </p>
                 </div>
-                <div className="msg-bubble">
-                  {msg.content || (
-                    <div className="typing-indicator">
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        <div ref={messagesEndRef} />
+
+                {msg.role === "user" && (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-300/30 bg-violet-400/10 text-sm font-black text-violet-200">
+                    USR
+                  </div>
+                )}
+              </motion.div>
+            ))}
+
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
-      {messages.length === 0 && (
-        <div className="quick-chips">
-          {CHIPS.map((chip) => (
-            <button key={chip} className="chip" onClick={() => sendMessage(chip)}>
-              {chip.toUpperCase()}
-            </button>
-          ))}
+      <div className="border-t border-cyan-400/20 bg-[#020b16] p-5">
+        <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/25 bg-[#010812] p-3">
+          <span className="px-2 text-2xl font-black text-cyan-300">&gt;_</span>
+
+          <input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleSend();
+            }}
+            autoComplete="off"
+            placeholder="Escribe un comando para Jarvis..."
+            className="min-w-0 flex-1 bg-transparent px-2 py-4 text-xl font-semibold text-white outline-none placeholder:text-slate-500"
+          />
+
+          <button
+            type="button"
+            onClick={handleMic}
+            className={`rounded-xl border px-5 py-4 text-lg font-black transition ${
+              isRecording
+                ? "border-red-300 bg-red-500/20 text-red-100"
+                : "border-cyan-300/30 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/20"
+            }`}
+          >
+            {isRecording ? "⏹" : "🎙"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading}
+            className="rounded-xl border border-cyan-300/40 bg-cyan-400/20 px-6 py-4 text-lg font-black uppercase tracking-[0.2em] text-cyan-50 transition hover:bg-cyan-400/30 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Enviar
+          </button>
         </div>
-      )}
-
-      <div className="input-area">
-        <span className="input-prefix">&gt;_</span>
-        <input
-          className="chat-input"
-          type="text"
-          placeholder="ingresa comando..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          autoComplete="off"
-        />
-        <button
-          className={`mic-btn ${isRecording ? "recording" : ""}`}
-          onClick={handleMic}
-          title={isRecording ? "Detener grabación" : "Hablar con Jarvis"}
-        >
-          {isRecording ? "⏹" : "🎤"}
-        </button>
-        <button className="send-btn" onClick={handleSend} disabled={isLoading || isRecording}>
-          ENVIAR
-        </button>
       </div>
-    </div>
+    </section>
   );
 }

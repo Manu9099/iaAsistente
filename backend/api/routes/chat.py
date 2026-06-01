@@ -155,6 +155,71 @@ TOOLS = [
                 "required": ["app"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "open_document",
+            "description": "Abre un documento Word o Excel guardado por Jarvis",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Nombre del archivo a abrir"},
+                    "folder": {"type": "string", "description": "Subcarpeta donde está guardado (opcional)"}
+                },
+                "required": ["filename"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "play_song",
+            "description": "Reproduce una canción en Spotify",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Nombre de la canción o artista a reproducir"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "pause_music",
+            "description": "Pausa la música en Spotify",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "next_song",
+            "description": "Pasa a la siguiente canción en Spotify",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "current_song",
+            "description": "Muestra qué canción está sonando en Spotify",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 
 ]
@@ -200,6 +265,30 @@ async def execute_tool(name: str, args: dict) -> str:
         from api.routes.computer import open_file, AppRequest
         result = await open_file(AppRequest(app=args["app"]))
         return f"Aplicación {result['app']} abierta"
+    elif name == "open_document":
+        from api.routes.computer import open_document, OpenFileRequest
+        result = await open_document(OpenFileRequest(**args))
+        return f"Documento abierto: {result['path']}"
+    elif name == "play_song":
+        from api.routes.spotify import play_song, PlayRequest
+        result = await play_song(PlayRequest(query=args["query"]))
+        if result["status"] == "reproduciendo":
+            return f"Reproduciendo {result['song']} de {result['artist']}"
+        return f"Error: {result.get('detail', 'No se pudo reproducir')}"
+    elif name == "pause_music":
+        from api.routes.spotify import pause
+        result = await pause()
+        return "Música pausada"
+    elif name == "next_song":
+        from api.routes.spotify import next_track
+        result = await next_track()
+        return "Siguiente canción"
+    elif name == "current_song":
+        from api.routes.spotify import current_track
+        result = await current_track()
+        if "song" in result:
+            return f"Sonando: {result['song']} de {result['artist']}"
+        return "No hay nada reproduciendo"
 
     return "Herramienta no encontrada"
 
