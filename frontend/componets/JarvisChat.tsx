@@ -33,6 +33,17 @@ export default function JarvisChat() {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  const { isRecording, isSpeaking, startRecording, stopRecording, speak } =
+    useVoice((transcript: string) => {
+      void sendMessage(transcript);
+    }) as {
+      isRecording: boolean;
+      isSpeaking: boolean;
+      startRecording: () => void | Promise<void>;
+      stopRecording: () => void;
+      speak: (text: string) => void;
+    };
+
   const {
     messages,
     isLoading,
@@ -40,7 +51,9 @@ export default function JarvisChat() {
     handleClear,
     activeAgent,
     setActiveAgent,
-  } = useJarvisChat() as {
+  } = useJarvisChat((reply: string) => {
+    speak(reply);
+  }) as {
     messages: ChatMessage[];
     isLoading: boolean;
     sendMessage: (text: string) => void | Promise<void>;
@@ -49,23 +62,13 @@ export default function JarvisChat() {
     setActiveAgent: (agent: string) => void;
   };
 
-  const { isRecording, isSpeaking, startRecording, stopRecording } = useVoice(
-    (transcript: string) => {
-      void sendMessage(transcript);
-    }
-  ) as {
-    isRecording: boolean;
-    isSpeaking: boolean;
-    startRecording: () => void | Promise<void>;
-    stopRecording: () => void;
-  };
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   function handleSend() {
     if (!input.trim()) return;
+
     void sendMessage(input);
     setInput("");
   }
@@ -211,7 +214,9 @@ export default function JarvisChat() {
 
       <div className="border-t border-cyan-400/20 bg-[#020b16] p-5">
         <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/25 bg-[#010812] p-3">
-          <span className="px-2 text-2xl font-black text-cyan-300">&gt;_</span>
+          <span className="px-2 text-2xl font-black text-cyan-300">
+            &gt;_
+          </span>
 
           <input
             value={input}
