@@ -220,6 +220,34 @@ TOOLS = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_outlook_email",
+            "description": "Envía un correo electrónico via Outlook/Hotmail",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to": {"type": "string", "description": "Email del destinatario"},
+                    "subject": {"type": "string", "description": "Asunto del correo"},
+                    "body": {"type": "string", "description": "Cuerpo del correo"}
+                },
+                "required": ["to", "subject", "body"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_outlook_inbox",
+            "description": "Obtiene los últimos correos del inbox de Outlook/Hotmail",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 
 ]
@@ -289,6 +317,15 @@ async def execute_tool(name: str, args: dict) -> str:
         if "song" in result:
             return f"Sonando: {result['song']} de {result['artist']}"
         return "No hay nada reproduciendo"
+    elif name == "send_outlook_email":
+        from api.routes.microsoft import send_outlook_email, OutlookEmailRequest
+        result = await send_outlook_email(OutlookEmailRequest(**args))
+        return f"Correo Outlook enviado a {result['to']}"
+    elif name == "get_outlook_inbox":
+        from api.routes.microsoft import get_outlook_inbox
+        result = await get_outlook_inbox()
+        emails = "\n".join([f"- De: {e['from']} | Asunto: {e['subject']} | ID: {e['id']}" for e in result])
+        return f"Inbox Outlook:\n{emails}"
 
     return "Herramienta no encontrada"
 
