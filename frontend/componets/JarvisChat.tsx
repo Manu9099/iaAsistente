@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useJarvisChat } from "@/hooks/useJarvisChat";
 import { useVoice } from "@/hooks/useVoice";
 import JarvisAvatar from "./JarvisAvatar";
+import ChatHistory from "./ChatHistory";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -42,7 +43,13 @@ export default function JarvisChat() {
   const [demoMode, setDemoMode] = useState(false);
   const [error, setError] = useState("");
   const [demoIndex, setDemoIndex] = useState(0);
+  const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const storedSessionId = localStorage.getItem("jarvis_session_id");
+    if (storedSessionId) setSessionId(storedSessionId);
+  }, []);
 
   const { isRecording, isSpeaking, startRecording, stopRecording, speak } =
     useVoice((transcript: string) => {
@@ -124,6 +131,17 @@ export default function JarvisChat() {
     ? "bg-blue-300 shadow-[0_0_18px_rgba(147,197,253,0.9)] animate-pulse"
     : "bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.9)]";
 
+    function handleLoadSession(sessionId: string, msgs: any[]) {
+    const formatted = msgs.map((m: any) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+      agent: "chat",
+    }));
+    // reload page with session - simplest approach
+    localStorage.setItem("jarvis_session_id", sessionId);
+    window.location.reload();
+  }
+
   return (
     <section className="flex h-full min-h-[calc(100vh-190px)] w-full flex-1 flex-col overflow-hidden rounded-4xl border border-cyan-400/25 bg-[#010812] text-white">
 
@@ -157,7 +175,10 @@ export default function JarvisChat() {
           >
             {voiceEnabled ? "🔊 VOZ ON" : "🔇 VOZ OFF"}
           </button>
-
+                  <ChatHistory
+            currentSessionId={sessionId || ""}
+            onLoadSession={handleLoadSession}
+          />
           {/* Demo mode */}
           <button
             type="button"
@@ -266,6 +287,7 @@ export default function JarvisChat() {
                 >
                   {chip}
                 </button>
+                
               ))}
             </div>
           </div>
@@ -313,7 +335,7 @@ export default function JarvisChat() {
           </div>
         )}
       </div>
-
+        
       {/* Input */}
       <div className="border-t border-cyan-400/20 bg-[#020b16] p-5">
         <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/25 bg-[#010812] p-3">
@@ -336,7 +358,9 @@ export default function JarvisChat() {
             }`}
           >
             {isRecording ? "⏹" : "🎙"}
+            
           </button>
+          
           <button
             type="button"
             onClick={handleSend}
@@ -345,6 +369,7 @@ export default function JarvisChat() {
           >
             Enviar
           </button>
+          
         </div>
       </div>
     </section>

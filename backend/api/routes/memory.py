@@ -61,3 +61,33 @@ def clear_conversation(session_id: str, db: Session = Depends(get_db)):
         .delete()
     db.commit()
     return {"status": "cleared"}
+
+@router.get("/sessions")
+def get_sessions(db: Session = Depends(get_db)):
+    from sqlalchemy import func
+    sessions = db.query(
+        Conversation.session_id,
+        func.min(Conversation.created_at).label("started_at"),
+        func.max(Conversation.created_at).label("last_at"),
+        func.count(Conversation.id).label("message_count"),
+    ).group_by(Conversation.session_id).order_by(func.max(Conversation.created_at).desc()).all()
+
+    return [
+        {
+            "session_id": s.session_id,
+            "started_at": s.started_at,
+            "last_at": s.last_at,
+            "message_count": s.message_count,
+        }
+        for s in sessions
+    ]
+
+@router.get("/session/preview/{session_id}")
+def get_session_preview(session_id: str, db: Session = Depends(get_db)):
+    first_user_msg = db.query(Conversation)\
+        .filter(Conversation.session_id == session_id, Conversation.role == "user")\
+        .order_by(Conversation.created_at)\
+        .first()
+    return {
+        "preview": first_user_msg.content[:100] if first_user_msg else "Sesión vacía"
+    }
